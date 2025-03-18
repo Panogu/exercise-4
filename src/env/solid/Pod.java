@@ -74,7 +74,38 @@ public class Pod extends Artifact {
    */
     @OPERATION
     public void publishData(String containerName, String fileName, Object[] data) {
-        log("2. Implement the method publishData()");
+        try {
+            // Ensure the podURL ends with a slash
+            String podURLWithSlash = podURL;
+            if (!podURLWithSlash.endsWith("/")) {
+                podURLWithSlash += "/";
+            }
+            
+            // Create the URL for the LDP container
+            URL url = new URI(podURLWithSlash + containerName + "/" + fileName).toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            
+            // Set up the HTTP request for LDP resource creation
+            connection.setRequestMethod("PUT");
+            connection.setRequestProperty("Content-Type", "text/plain");
+            connection.setDoOutput(true);
+            
+            // Send the data to the LDP resource
+            String dataStr = createStringFromArray(data);
+            connection.getOutputStream().write(dataStr.getBytes());
+            
+            // Check the response
+            int responseCode = connection.getResponseCode();
+            if (responseCode >= 200 && responseCode < 300) {
+                log("Data published to '" + fileName + "' in container '" + containerName + "' at: " + podURLWithSlash + containerName + "/" + fileName);
+            } else {
+                log("Failed to publish data to '" + fileName + "' in container '" + containerName + "'. Response code: " + responseCode);
+            }
+            
+            connection.disconnect();
+        } catch (Exception e) {
+            log("Error publishing data to '" + fileName + "' in container '" + containerName + "': " + e.getMessage());
+        }
     }
 
   /**
@@ -97,23 +128,31 @@ public class Pod extends Artifact {
    * @return An array whose elements are the data read from the .txt file
    */
     public Object[] readData(String containerName, String fileName) {
-        log("3. Implement the method readData(). Currently, the method returns mock data");
-
-        // Remove the following mock responses once you have implemented the method
-        switch(fileName) {
-            case "watchlist.txt":
-                Object[] mockWatchlist = new Object[]{"The Matrix", "Inception", "Avengers: Endgame"};
-                return mockWatchlist;
-            case "sleep.txt":
-                Object[] mockSleepData = new Object[]{"6", "7", "5"};
-                return mockSleepData;
-            case "trail.txt":
-                Object[] mockTrailData = new Object[]{"3", "5.5", "5.5"};
-                return mockTrailData; 
-            default:
-                return new Object[0];
+        try {
+            // Ensure the podURL ends with a slash
+            String podURLWithSlash = podURL;
+            if (!podURLWithSlash.endsWith("/")) {
+                podURLWithSlash += "/";
+            }
+            
+            // Create the URL for the LDP container
+            URL url = new URI(podURLWithSlash + containerName + "/" + fileName).toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            
+            // Set up the HTTP request for LDP resource retrieval
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "text/plain");
+            
+            // Read the data from the LDP resource
+            String dataStr = new String(connection.getInputStream().readAllBytes());
+            
+            connection.disconnect();
+            
+            return createArrayFromString(dataStr);
+        } catch (Exception e) {
+            log("Error reading data from '" + fileName + "' in container '" + containerName + "': " + e.getMessage());
+            return new Object[0];
         }
-
     }
 
   /**
