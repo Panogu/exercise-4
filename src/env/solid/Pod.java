@@ -1,5 +1,9 @@
 package solid;
 
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+
 import cartago.Artifact;
 import cartago.OPERATION;
 import cartago.OpFeedbackParam;
@@ -29,7 +33,36 @@ public class Pod extends Artifact {
    */
     @OPERATION
     public void createContainer(String containerName) {
-        log("1. Implement the method createContainer()");
+        try {
+            // Ensure the podURL ends with a slash
+            String podURLWithSlash = podURL;
+            if (!podURLWithSlash.endsWith("/")) {
+                podURLWithSlash += "/";
+            }
+            
+            // Create the URL for the LDP container
+            URL url = new URI(podURLWithSlash).toURL();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            
+            // Set up the HTTP request for LDP container creation
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "text/turtle");
+            connection.setRequestProperty("Link", "<http://www.w3.org/ns/ldp#BasicContainer>; rel=\"type\"");
+            connection.setRequestProperty("Slug", containerName);
+            connection.setDoOutput(true);
+            
+            // Send the request and check the response
+            int responseCode = connection.getResponseCode();
+            if (responseCode >= 200 && responseCode < 300) {
+                log("Container '" + containerName + "' created successfully at: " + podURLWithSlash + containerName + "/");
+            } else {
+                log("Failed to create container '" + containerName + "'. Response code: " + responseCode);
+            }
+            
+            connection.disconnect();
+        } catch (Exception e) {
+            log("Error creating container '" + containerName + "': " + e.getMessage());
+        }
     }
 
   /**
